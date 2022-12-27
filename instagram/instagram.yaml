@@ -1,0 +1,16 @@
+params:
+  kwargs:
+    # browser: Chrome
+    # headless: False
+    url: https://www.instagram.com/
+    width: 800
+    height: 600
+  search:
+    url: https://www.instagram.com/explore/tags/
+    keyword:
+      - 런던여행
+    max: 10
+  account:
+    id: jungsunbin@naver.com
+    password: 000000000
+log: instagram.log
