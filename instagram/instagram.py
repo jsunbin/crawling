@@ -14,10 +14,16 @@
 #
 # Change Log
 # --------
+#  * [2023/01/06]
+#     - 알림설정 팝업 종료하는 부분 close_popup()으로 분리
+#     - 쿠키 저장하는 부분 추가
+#     - 쿠키를 저장하여 로그인 하도록 변경
 #  * [2022/12/27]
 #     - starting
 ################################################################################
+import os
 import yaml
+import pickle
 import traceback
 import urllib.request
 from urllib.parse import quote_plus
@@ -54,6 +60,16 @@ class Instagram(PySelenium):
         self.safe_click(e)
         self.implicitly_wait(after_wait=1)
 
+        self._cookies()
+
+        self.close_popup()
+
+    # ==========================================================================
+    def _cookies(self):
+        pickle.dump(self.driver.get_cookies(), open('cookies.pkl', 'wb'))
+
+    # ==========================================================================
+    def close_popup(self):
         # 알림설정: 하지않기
         self.switch_to_window()
         self.driver.switch_to.active_element
@@ -99,10 +115,37 @@ class Instagram(PySelenium):
                 urllib.request.urlretrieve(img_url, 'test.jpg')
 
     # ==========================================================================
+    def add_cookies(self):
+        cookie_path = 'cookies.pkl'
+        try:
+            if not os.path.isfile(cookie_path):
+                print("no cookie")
+                self.logger.error('"cookies.pkl" file does not exits..')
+                raise
+            cookies = pickle.load(open(cookie_path, "rb"))
+            for cookie in cookies:
+                self.driver.add_cookie(cookie)
+            self.driver.refresh()
+            self.implicitly_wait(after_wait=1)
+
+            # 로그인 화면이 아닌지 검증
+            try:
+                # 로그인 창이면, 직접 로그인
+                e = self.get_by_xpath('//input[@name="username"]')
+                self.logger.debug('Unable to login with Cookie file..it will be updated..')
+                self.login()
+            except Exception as err:
+                # 정상적으로 로그인 성공했으면, 즉 로그인 창이 아니면 팝업만 종료
+                self.close_popup()
+        except Exception as e:
+            raise LookupError
+
+    # ==========================================================================
     def start(self):
         try:
             self.logger.info(f'Starting {self.__class__.__name__}...')
-            self.login()
+            self.add_cookies()
+            # self.login()
             self.search()
         except Exception as err:
             self.logger.error(traceback.format_exc())
